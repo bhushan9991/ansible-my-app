@@ -41,3 +41,50 @@ Use following command to execute ansible playbook under /my_app/ directory:
   - In this command, we are passing the git branch name (e.g. test) as an user provided input in **--extra-vars**
 >Note: **--ask-vault-pass** in execution command is used only if encrypted private key is provided.
     
+
+
+**Console output:**
+```
+~/dev/my_app$ ansible-playbook -i aws_ec2.yaml playbook.yaml --extra-vars "git_branch=dev" --ask-vault-pass
+Vault password: 
+
+PLAY [Ping dynamic inventory] *************************************************************************************************************************************************************************************
+
+TASK [Gathering Facts] ********************************************************************************************************************************************************************************************
+ok: [ec2-34-255-215-XXX.eu-west-1.compute.amazonaws.com]
+
+TASK [ping dynamic inventory] *************************************************************************************************************************************************************************************
+ok: [ec2-34-255-215-XXX.eu-west-1.compute.amazonaws.com]
+
+TASK [Creating webapps Group] *************************************************************************************************************************************************************************************
+changed: [ec2-34-255-215-XXX.eu-west-1.compute.amazonaws.com] => (item=webapps)
+
+TASK [Creating my_app_user user and adding user in webapps group] *************************************************************************************************************************************************
+changed: [ec2-34-255-215-XXX.eu-west-1.compute.amazonaws.com] => (item={'name': 'my_app_user', 'group': 'webapps'})
+
+TASK [Ensure .ssh directory exists.] ******************************************************************************************************************************************************************************
+changed: [ec2-34-255-215-XXX.eu-west-1.compute.amazonaws.com]
+
+TASK [Install ssh key to remote host for git clone.] **************************************************************************************************************************************************************
+changed: [ec2-34-255-215-XXX.eu-west-1.compute.amazonaws.com]
+
+TASK [Install common software requirements] ***********************************************************************************************************************************************************************
+changed: [ec2-34-255-215-XXX.eu-west-1.compute.amazonaws.com] => (item=['python3-devel', 'git', 'make'])
+
+TASK [Clone a repository into /opt.] ******************************************************************************************************************************************************************************
+changed: [ec2-34-255-215-XXX.eu-west-1.compute.amazonaws.com]
+
+TASK [Install nginx repository] ***********************************************************************************************************************************************************************************
+changed: [ec2-34-255-215-XXX.eu-west-1.compute.amazonaws.com]
+
+TASK [Install nginx web server] ***********************************************************************************************************************************************************************************
+changed: [ec2-34-255-215-XXX.eu-west-1.compute.amazonaws.com]
+
+TASK [Restart nginx after app is installed] ***********************************************************************************************************************************************************************
+changed: [ec2-34-255-215-XXX.eu-west-1.compute.amazonaws.com]
+
+PLAY RECAP ********************************************************************************************************************************************************************************************************
+ec2-34-255-215-XXX.eu-west-1.compute.amazonaws.com : ok=11   changed=7    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+
+~/dev/my_app$
+```
