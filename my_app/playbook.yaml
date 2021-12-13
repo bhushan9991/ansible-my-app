@@ -1,0 +1,94 @@
+- name: Ping dynamic inventory
+  hosts: linux
+  become: yes
+  become_method: sudo
+  vars:
+    source_key: "{{ playbook_dir }}/files/id_rsa.github"
+    dest_key: "/home/my_app_user/.ssh/id_rsa.github"
+    project_dir: "/opt/my_app"
+    git_branch: "{{ git_branch }}"
+
+  tasks:
+    - name: ping dynamic inventory  # ping to check whether remote machine conenction is fine.
+      ping:
+
+    - name : "Creating webapps Group"
+      group:
+        name: "{{item}}"
+        gid: 570
+        state: "present"
+      with_items:
+        - webapps
+
+    - name : "Creating my_app_user user and adding user in webapps group"
+      user:
+          name: "{{item.name}}"
+          comment: "User to deploy app"
+          create_home: yes
+          uid: 1503
+          group: "{{item.group}}"
+          state: present
+          shell: /bin/bash
+          generate_ssh_key: yes
+          ssh_key_file: .ssh/id_rsa
+          ssh_key_type: rsa
+      with_items:
+        - { name: 'my_app_user', group: 'webapps'}
+
+    - name: Ensure .ssh directory exists.
+      file:
+        dest: "{{ dest_key | dirname }}"
+        mode: 0744
+        owner: my_app_user
+        group: webapps
+        state: directory
+
+    - name: Install ssh key to remote host for git clone.
+      copy:
+        src: "{{ source_key }}"
+        dest: "{{ dest_key }}"
+        mode: 0644
+        owner: my_app_user
+        group: webapps
+
+    - name: Install common software requirements
+      ignore_errors: yes
+      become: true
+      yum:
+        state: present
+        name:
+          - python3-devel
+          - git
+          - make
+
+    - name: Install nginx repository
+      yum: name=http://nginx.org/packages/rhel/7/x86_64/RPMS/nginx-1.20.0-1.el7.ngx.x86_64.rpm state=present
+
+    - name: Install nginx web server
+      yum: name=nginx state=installed update_cache=true
+      notify:
+        - start nginx
+
+    - name: Clone a repository into /opt/my_app.
+      git:
+        repo: "git@bitbucket.org:my-org/my_app.git"
+        key_file: "{{ dest_key }}"
+        dest: "{{ project_dir }}"
+        version: "{{ git_branch }}"
+        depth: 1
+        accept_hostkey: yes
+        clone: yes
+
+    - name: Run make install in /opt/my_app
+      remote_user: my_app_user
+      become: true
+      args:
+        chdir: "{{ project_dir }}"
+      shell: make install
+
+    - name: Restart nginx after app is installed
+      service: name=nginx state=restarted
+
+  handlers:
+    - name: start nginx
+      service: name=nginx enabled=yes state=started
